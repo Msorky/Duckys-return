@@ -510,7 +510,12 @@ local function Initiate()
 				Initiate()
 			elseif Args[1] == ".airlock" then
 				AirLock(true)
+                task.wait(0.1)
+                game.Players.LocalPlayer.Character.HumanoidRootPart.Anchored = true
+                
 			elseif Args[1] == ".stopairlock" then
+                game.Players.LocalPlayer.Character.HumanoidRootPart.Anchored = false
+                task.wait(0.1)
 				AirLock(false)
 			elseif Message == ".bring" then
 				-- didnt feel the need for a function lmao
@@ -647,39 +652,31 @@ local function Initiate()
 					CmdSettings["Aura"] = nil
 					CmdSettings["Dropping"] = false
 
-					local OldMoney = 0
-					for i,v in pairs(DropFolder:GetChildren()) do
-						if v.Name == "MoneyDrop" then
-							local numbers = string.gsub(v.BillboardGui.TextLabel.Text, "%D", "")
-							OldMoney += numbers
-						end
-					end
 					game.ReplicatedStorage.MainEvent:FireServer(
 						"DropMoney",
 						10000
 					)
 					CmdSettings["CustomDrop"] = true
 					coroutine.wrap(function()
-						repeat wait(2.5) 	
+                        Money = 0
+						local connection = DropFolder.ChildAdded:Connect(function(child)
+                            repeat task.wait() until child:FindFirstChild("BillboardGui")
+                            repeat task.wait() until child.BillboardGui:FindFirstChild("TextLabel")
+                            if child.Name == "MoneyDrop" then
+                                local numbers = string.gsub(child.BillboardGui.TextLabel.Text, "%D", "")
+                                Money += numbers
+                            end
+                        end)
+                        repeat wait(0.1)
 							game.ReplicatedStorage.MainEvent:FireServer(
 								"DropMoney",
 								10000
 							)
-
-							local Money = 0
-							if DropFolder then
-								for i,v in pairs(DropFolder:GetChildren()) do
-									if v.Name == "MoneyDrop" then
-										local numbers = string.gsub(v.BillboardGui.TextLabel.Text, "%D", "")
-										Money += numbers
-									end
-								end 
-							end
-
-						until not DropFolder or Money >= (OldMoney+Number) or not CmdSettings["CustomDrop"]
+                        until not DropFolder or Money >= (Number) or not CmdSettings["CustomDrop"]
 						if CmdSettings["CustomDrop"] then
 							CmdSettings["CustomDrop"] = nil
 							CmdSettings["Dropping"] = nil
+                            connection:Disconnect()
 							game.ReplicatedStorage.DefaultChatSystemChatEvents.SayMessageRequest:FireServer('Custom Drop has finished.', 'All'); 
 						end
 					end)()
